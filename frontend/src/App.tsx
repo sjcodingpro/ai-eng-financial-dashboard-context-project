@@ -1,14 +1,31 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { KPIRow } from "@/components/dashboard/kpi-row";
-import { IncomeOutcomeChart } from "@/components/dashboard/income-outcome-chart";
-import { ProfitPercentChart } from "@/components/dashboard/profit-percent-chart";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   type FinancialMovement,
   type KPIMetrics,
   type MonthlyDataPoint,
 } from "@/lib/financial-types";
 import { computeKPIs, computeMonthlyData } from "@/lib/financial-utils";
+
+// Performance fix (skill: vercel-react-best-practices, bundle-dynamic-imports
+// — the skill's own example uses next/dynamic; this app uses Vite, so the
+// equivalent is React.lazy + Suspense): both charts depend on recharts,
+// the largest single library in the bundle (the build previously warned
+// about a 585 kB chunk). Lazy-loading defers that cost until the charts
+// actually render.
+const IncomeOutcomeChart = lazy(() =>
+  import("@/components/dashboard/income-outcome-chart").then((mod) => ({
+    default: mod.IncomeOutcomeChart,
+  })),
+);
+const ProfitPercentChart = lazy(() =>
+  import("@/components/dashboard/profit-percent-chart").then((mod) => ({
+    default: mod.ProfitPercentChart,
+  })),
+);
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -18,6 +35,23 @@ async function fetchFinancialData(): Promise<FinancialMovement[]> {
     throw new Error(`Failed to fetch financial data: ${response.status}`);
   }
   return response.json();
+}
+
+// Fallback shown only while the chart's own JS chunk is downloading (a
+// one-time cost per browser session). Mirrors the chart's own internal
+// loading skeleton so there is no visible layout shift.
+function ChartSkeletonFallback() {
+  return (
+    <Card className="border-border/60">
+      <CardHeader className="pb-4">
+        <Skeleton className="h-5 w-52" />
+        <Skeleton className="h-3 w-64 mt-1" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-[280px] w-full rounded-lg" />
+      </CardContent>
+    </Card>
+  );
 }
 
 function App() {
@@ -64,8 +98,7 @@ function App() {
             {error ? (
               // Accessibility fix (skill: accessibility, WCAG 3.3.1/3.3.3 +
               // live regions 4.1.3): role="alert" makes screen readers
-              // announce this message as soon as it appears, instead of
-              // silently failing for non-sighted users.
+              // announce this message as soon as it appears.
               <div
                 role="alert"
                 className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive-foreground"
@@ -82,8 +115,12 @@ function App() {
               aria-label="Financial charts"
               className="grid grid-cols-1 gap-4 xl:grid-cols-2"
             >
-              <IncomeOutcomeChart data={monthlyData} loading={loading} />
-              <ProfitPercentChart data={monthlyData} loading={loading} />
+              <Suspense fallback={<ChartSkeletonFallback />}>
+                <IncomeOutcomeChart data={monthlyData} loading={loading} />
+              </Suspense>
+              <Suspense fallback={<ChartSkeletonFallback />}>
+                <ProfitPercentChart data={monthlyData} loading={loading} />
+              </Suspense>
             </section>
           </div>
         </div>
