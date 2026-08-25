@@ -68,6 +68,15 @@ export function IncomeOutcomeChart({ data, loading }: IncomeOutcomeChartProps) {
       <CardHeader className="pb-4">
         <CardTitle className="text-base font-semibold">Income vs. Outcome</CardTitle>
         <CardDescription>Monthly revenue and expenditure evolution</CardDescription>
+        {/* Accessibility fix (skill: accessibility, WCAG 1.1 media alternatives):
+            the chart below is an SVG with no readable text content, so screen
+            reader users get nothing from it. This hidden summary gives them
+            an equivalent description. */}
+        <p className="sr-only">
+          {hasData
+            ? `Line chart showing monthly income and outcome for 2024 across ${data.length} months.`
+            : 'No income and outcome data available for the selected period.'}
+        </p>
       </CardHeader>
       <CardContent>
         {!hasData ? (
