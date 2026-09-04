@@ -69,6 +69,14 @@ export function ProfitPercentChart({ data, loading }: ProfitPercentChartProps) {
       <CardHeader className="pb-4">
         <CardTitle className="text-base font-semibold">Profit Margin %</CardTitle>
         <CardDescription>Monthly profit as a percentage of total income</CardDescription>
+        {/* Accessibility fix (skill: accessibility, WCAG 1.1 media alternatives):
+            equivalent text description for screen reader users, since the
+            SVG chart below has no readable text content. */}
+        <p className="sr-only">
+          {hasData
+            ? `Line chart showing monthly profit margin percentage for 2024 across ${data.length} months.`
+            : 'No profit margin data available for the selected period.'}
+        </p>
       </CardHeader>
       <CardContent>
         {!hasData ? (

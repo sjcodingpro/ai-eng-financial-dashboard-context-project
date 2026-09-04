@@ -19,13 +19,20 @@ function formatMonthYearLabel(yearMonthKey: string): string {
 }
 
 export function computeKPIs(movements: FinancialMovement[]): KPIMetrics {
-  const totalIncome = movements
-    .filter((m) => m.operation_type === "income")
-    .reduce((sum, m) => sum + m.amount, 0);
+  // Performance fix (skill: vercel-react-best-practices, js-combine-iterations):
+  // the original version ran .filter().reduce() twice over the same array
+  // (once for income, once for outcome). This combines both into a single
+  // pass over the data.
+  let totalIncome = 0;
+  let totalOutcome = 0;
 
-  const totalOutcome = movements
-    .filter((m) => m.operation_type === "outcome")
-    .reduce((sum, m) => sum + m.amount, 0);
+  for (const m of movements) {
+    if (m.operation_type === "income") {
+      totalIncome += m.amount;
+    } else {
+      totalOutcome += m.amount;
+    }
+  }
 
   const profit = totalIncome - totalOutcome;
   const profitPercent = totalIncome > 0 ? (profit / totalIncome) * 100 : 0;
